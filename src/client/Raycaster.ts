@@ -1,21 +1,11 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import Stats from 'three/examples/jsm/libs/stats.module';
-import { GUI } from 'dat.gui';
-
-import { PLYLoader } from 'three/examples/jsm/loaders/PLYLoader';
-// import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
-// import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 
 
 const scene = new THREE.Scene();
 scene.add(new THREE.AxesHelper(5))
-
-// const light = new THREE.PointLight();
-// light.position.set(5, 5, 5);
-// scene.add(light)
-
 const camera = new THREE.PerspectiveCamera(
     75,
     window.innerWidth / window.innerHeight,
@@ -34,7 +24,6 @@ document.body.appendChild(renderer.domElement);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
-// controls.addEventListener('change', render) // this line is nunecessary if you are re-rendering within the animation loop
 
 const arrowHelper = new THREE.ArrowHelper(
     new THREE.Vector3(),
@@ -45,7 +34,6 @@ const arrowHelper = new THREE.ArrowHelper(
 scene.add(arrowHelper)
 
 const material = new THREE.MeshNormalMaterial()
-const boxGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
 const coneGeometry = new THREE.ConeGeometry(0.05, 0.2, 8);
 
 const raycaster = new THREE.Raycaster();
@@ -72,7 +60,6 @@ loader.load(
             }
         })
         scene.add(gltf.scene)
-        // sceneMeshes.push(gltf.scene)
     },
     (xhr) => {
         console.log((xhr.loaded / xhr.total) * 100 + '% loaded')
@@ -138,10 +125,6 @@ function onDoubleClick(event: MouseEvent) {
 const stats = Stats();
 document.body.appendChild(stats.dom);
 
-// GUI 추가
-const gui = new GUI();
-
-
 function animate() {
     controls.update();
     render();
@@ -155,4 +138,3 @@ function render() {
 }
 
 animate();
-// render();
