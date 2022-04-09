@@ -13,19 +13,18 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   1000
 );
-
-camera.position.set(-0.6, -0.45, 2)
+camera.position.z = 5;
 
 const renderer = new THREE.WebGLRenderer();
 renderer.physicallyCorrectLights = true;
 renderer.shadowMap.enabled = true;
+renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 
-const raycaster = new THREE.Raycaster()
 const sceneMeshes: THREE.Mesh[] = [];
 
 const loader = new GLTFLoader();
@@ -35,17 +34,15 @@ loader.load(
     gltf.scene.traverse(function (child) {
       if ((child as THREE.Mesh).isMesh) {
         const m = child as THREE.Mesh;
-        if(m.name === 'Suzanne') {
-          m.castShadow = true;
-        } else {
-          m.receiveShadow = true
-        }
+        m.receiveShadow = true;
+        m.castShadow = true;
         sceneMeshes.push(m);
       }
       if ((child as THREE.Light).isLight) {
         const l = child as THREE.Light;
         l.castShadow = true;
-        l.shadow.bias = -0.001;
+        l.shadow.bias = -0.003;
+        l.shadow.mapSize.width = l.shadow.mapSize.height = 2048;
       }
     });
     scene.add(gltf.scene);
@@ -58,6 +55,8 @@ loader.load(
   }
 );
 
+const raycaster = new THREE.Raycaster()
+
 renderer.domElement.addEventListener('dblclick', onDoubleClick, false);
 function onDoubleClick(event: MouseEvent){
   const mouse = {
@@ -69,13 +68,25 @@ function onDoubleClick(event: MouseEvent){
   const intersects = raycaster.intersectObjects(sceneMeshes, false)
   if(intersects.length > 0) {
     const p = intersects[0].point;
-    new TWEEN.Tween(controls.target).to({
-      x:p.x,
-      y:p.y,
-      z:p.z
+
+    new TWEEN.Tween(sceneMeshes[0].position).to({
+      x: p.x,
+      z: p.z
     }, 500)
+    .start()
+
+    new TWEEN.Tween(sceneMeshes[0].position).to({
+      y: p.y + 3
+    }, 250)
     .easing(TWEEN.Easing.Cubic.Out)
     .start()
+    .onComplete(() => {
+      new TWEEN.Tween(sceneMeshes[0].position).to({
+        y: p.y + 1
+      }, 250)
+      .easing(TWEEN.Easing.Bounce.Out)
+      .start()
+    })
   }
 }
 
