@@ -1,109 +1,125 @@
-import * as THREE from "three";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
-import Stats from "three/examples/jsm/libs/stats.module";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
-import { TWEEN } from "three/examples/jsm/libs/tween.module.min";
+import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import State from 'three/examples/jsm/libs/stats.module';
+import { GUI } from 'dat.gui';
+import * as CANNON from 'cannon-es';
 
 const scene = new THREE.Scene();
 scene.add(new THREE.AxesHelper(5));
 
-const camera = new THREE.PerspectiveCamera(
+const light1 = new THREE.SpotLight();
+light1.position.set(2.5, 5, 5);
+light1.angle = Math.PI / 4;
+light1.penumbra = 0.5;
+light1.castShadow = true;
+light1.shadow.mapSize.width = light1.shadow.mapSize.height = 1024;
+light1.shadow.camera.near = 0.5;
+light1.shadow.camera.far = 20;
+scene.add(light1);
+
+const light2 = new THREE.SpotLight();
+light2.position.set(-2.5, 5, 5);
+light2.angle = Math.PI / 4;
+light2.penumbra = 0.5;
+light2.castShadow = true;
+light2.shadow.mapSize.width = light2.shadow.mapSize.height = 1024;
+light2.shadow.camera.near = 0.5;
+light2.shadow.camera.far = 20;
+scene.add(light2);
+
+const camera = new  THREE.PerspectiveCamera(
   75,
   window.innerWidth / window.innerHeight,
   0.1,
   1000
-);
+)
+camera.position.set(0, 2, 4);
 
-camera.position.set(-0.6, -0.45, 2)
 
 const renderer = new THREE.WebGLRenderer();
-renderer.physicallyCorrectLights = true;
-renderer.shadowMap.enabled = true;
 renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
 document.body.appendChild(renderer.domElement);
 
-const controls = new OrbitControls(camera, renderer.domElement);
+const controls =  new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
+controls.target.y = 0.5;
 
-const raycaster = new THREE.Raycaster()
-const sceneMeshes: THREE.Mesh[] = [];
+const world = new CANNON.World();
+world.gravity.set(0, -9.82, 0);
 
-const loader = new GLTFLoader();
-loader.load(
-  "models/monkey.glb",
-  function (gltf) {
-    gltf.scene.traverse(function (child) {
-      if ((child as THREE.Mesh).isMesh) {
-        const m = child as THREE.Mesh;
-        if(m.name === 'Suzanne') {
-          m.castShadow = true;
-        } else {
-          m.receiveShadow = true
-        }
-        sceneMeshes.push(m);
-      }
-      if ((child as THREE.Light).isLight) {
-        const l = child as THREE.Light;
-        l.castShadow = true;
-        l.shadow.bias = -0.001;
-      }
-    });
-    scene.add(gltf.scene);
-  },
-  (xhr) => {
-    console.log((xhr.loaded / xhr.total) * 100 + "% loaded");
-  },
-  (error) => {
-    console.log(error);
-  }
-);
+const cubeGeometry = new THREE.BoxGeometry(1,1,1);
+const cubeMesh = new THREE.Mesh(cubeGeometry, new THREE.MeshNormalMaterial())
+cubeMesh.position.x = -3
+cubeMesh.position.y = 3;
+cubeMesh.castShadow  = true;
+scene.add(cubeMesh);
 
-renderer.domElement.addEventListener('dblclick', onDoubleClick, false);
-function onDoubleClick(event: MouseEvent){
-  const mouse = {
-    x : (event.clientX / renderer.domElement.clientWidth) * 2 - 1,
-    y : -(event.clientY / renderer.domElement.clientHeight) * 2 + 1 
-  }
-  raycaster.setFromCamera(mouse, camera);
+const cubeShape = new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5));
+const cubeBody = new CANNON.Body({ mass: 1 });
+cubeBody.addShape(cubeShape);
+cubeBody.position.x = cubeMesh.position.x;
+cubeBody.position.y = cubeMesh.position.y;
+cubeBody.position.z = cubeMesh.position.z;
+world.addBody(cubeBody)
 
-  const intersects = raycaster.intersectObjects(sceneMeshes, false)
-  if(intersects.length > 0) {
-    const p = intersects[0].point;
-    new TWEEN.Tween(controls.target).to({
-      x:p.x,
-      y:p.y,
-      z:p.z
-    }, 500)
-    .easing(TWEEN.Easing.Cubic.Out)
-    .start()
-  }
-}
 
-window.addEventListener("resize", onWindowResize, false);
+const planeGeometry = new THREE.PlaneGeometry(25,25);
+const planeMesh = new THREE.Mesh(planeGeometry, new THREE.MeshPhongMaterial());
+planeMesh.rotateX(-Math.PI / 2);
+planeMesh.receiveShadow = true;
+scene.add(planeMesh)
+const planeShape = new CANNON.Plane();
+const planeBody = new CANNON.Body({ mass: 0 });
+planeBody.addShape(planeShape);
+planeBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1,0,0), -Math.PI / 2)
+world.addBody(planeBody)
+
+
+window.addEventListener('resize', onWindowResize, false);
 function onWindowResize() {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setSize(window.innerWidth, window.innerHeight)
   render();
 }
 
-const stats = Stats();
+const stats = State();
 document.body.appendChild(stats.dom);
 
-function animate() {
-  requestAnimationFrame(animate);
+const clock = new THREE.Clock()
+let delta;
 
+function animate(){
   controls.update();
 
-  TWEEN.update();
+  delta = Math.min(clock.getDelta(), 0.1)
+  world.step(delta)
 
-  render();
+  cubeMesh.position.set(
+    cubeBody.position.x,
+    cubeBody.position.y,
+    cubeBody.position.z
+  )
+  cubeMesh.quaternion.set(
+    cubeBody.quaternion.x,
+    cubeBody.quaternion.y,
+    cubeBody.quaternion.z,
+    cubeBody.quaternion.w,
 
-  stats.update();
+  )
+
+
+
+  render()
+  stats.update()
+
+  requestAnimationFrame(animate)
 }
 
 function render() {
-  renderer.render(scene, camera);
+  renderer.render(scene, camera)
 }
 
-animate();
+animate()
+
