@@ -63,7 +63,7 @@ cubeBody.position.y = cubeMesh.position.y;
 cubeBody.position.z = cubeMesh.position.z;
 world.addBody(cubeBody)
 
-
+// 바닥
 const planeGeometry = new THREE.PlaneGeometry(25,25);
 const planeMesh = new THREE.Mesh(planeGeometry, new THREE.MeshPhongMaterial());
 planeMesh.rotateX(-Math.PI / 2);
