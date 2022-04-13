@@ -1,8 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import State from 'three/examples/jsm/libs/stats.module';
-import { GUI } from 'dat.gui';
-import * as CANNON from 'cannon-es';
+import { CSG } from './utils/CSGMesh';
 
 const scene = new THREE.Scene();
 scene.add(new THREE.AxesHelper(5));
@@ -27,53 +26,100 @@ light2.shadow.camera.near = 0.5;
 light2.shadow.camera.far = 20;
 scene.add(light2);
 
-const camera = new  THREE.PerspectiveCamera(
+const camera = new THREE.PerspectiveCamera(
   75,
   window.innerWidth / window.innerHeight,
   0.1,
   1000
 )
-camera.position.set(0, 2, 4);
-
+camera.position.set(0.5, 2, 2.5);
 
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.shadowMap.enabled = true;
 document.body.appendChild(renderer.domElement);
 
-const controls =  new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.target.y = 0.5;
+const controls = new OrbitControls(camera, renderer.domElement);
 
-const world = new CANNON.World();
-world.gravity.set(0, -9.82, 0);
+const material = new THREE.MeshPhongMaterial({
+  map: new THREE.TextureLoader().load('img/grid.png')
+})
 
-const cubeGeometry = new THREE.BoxGeometry(1,1,1);
-const cubeMesh = new THREE.Mesh(cubeGeometry, new THREE.MeshNormalMaterial())
-cubeMesh.position.x = -3
-cubeMesh.position.y = 3;
-cubeMesh.castShadow  = true;
-scene.add(cubeMesh);
+{
+  const cubeMesh = new THREE.Mesh(
+    new THREE.BoxGeometry(2, 2, 2),
+    new THREE.MeshPhongMaterial({ color: 0xff0000 })
+  )
 
-const cubeShape = new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5));
-const cubeBody = new CANNON.Body({ mass: 1 });
-cubeBody.addShape(cubeShape);
-cubeBody.position.x = cubeMesh.position.x;
-cubeBody.position.y = cubeMesh.position.y;
-cubeBody.position.z = cubeMesh.position.z;
-world.addBody(cubeBody)
+  const sphereMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(1.45, 8, 8),
+    new THREE.MeshPhongMaterial({ color: 0x0000ff })
+  )
 
-// 바닥
-const planeGeometry = new THREE.PlaneGeometry(25,25);
-const planeMesh = new THREE.Mesh(planeGeometry, new THREE.MeshPhongMaterial());
-planeMesh.rotateX(-Math.PI / 2);
-planeMesh.receiveShadow = true;
-scene.add(planeMesh)
-const planeShape = new CANNON.Plane();
-const planeBody = new CANNON.Body({ mass: 0 });
-planeBody.addShape(planeShape);
-planeBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1,0,0), -Math.PI / 2)
-world.addBody(planeBody)
+  const cylinderMesh1 = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.85, 0.85, 2, 8, 1, false),
+    new THREE.MeshPhongMaterial({ color: 0x00ff00 })
+  )
+
+  const cylinderMesh2 = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.85, 0.85, 2, 8, 1, false),
+    new THREE.MeshPhongMaterial({ color: 0x00ff00 })
+  )
+
+  const cylinderMesh3 = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.85, 0.85, 2, 8, 1, false),
+    new THREE.MeshPhongMaterial({ color: 0x00ff00 })
+  )
+
+  cubeMesh.position.set(-5, 0, -6);
+  scene.add(cubeMesh);
+  sphereMesh.position.set(-2, 0, -6);
+  scene.add(sphereMesh)
+
+  const cubeCSG = CSG.fromMesh(cubeMesh);
+  const sphereCSG = CSG.fromMesh(sphereMesh);
+
+  const cubeSphereIntersectCSG = cubeCSG.intersect(sphereCSG);
+  const cubeSphereIntersectMesh = CSG.toMesh(
+    cubeSphereIntersectCSG,
+    new THREE.Matrix4()
+  )
+  cubeSphereIntersectMesh.material = new THREE.MeshPhongMaterial({
+    color: 0xff00ff
+  })
+  cubeSphereIntersectMesh.position.set(-2.5, 0, -3);
+  scene.add(cubeSphereIntersectMesh);
+
+
+  cylinderMesh1.position.set(1, 0, -6)
+  scene.add(cylinderMesh1);
+  cylinderMesh2.position.set(3, 0, -6)
+  cylinderMesh2.geometry.rotateX(Math.PI / 2);
+  scene.add(cylinderMesh2);
+  cylinderMesh3.position.set(5, 0, -6);
+  cylinderMesh3.geometry.rotateZ(Math.PI / 2)
+  scene.add(cylinderMesh3);
+
+  const cylinderCSG1 = CSG.fromMesh(cylinderMesh1);
+  const cylinderCSG2 = CSG.fromMesh(cylinderMesh2);
+  const cylinderCSG3 = CSG.fromMesh(cylinderMesh3);
+
+  const cylinderUnionCSG = cylinderCSG1.union(cylinderCSG2.union(cylinderCSG3))
+  const cylinderUnionMesh = CSG.toMesh(
+    cylinderUnionCSG,
+    new THREE.Matrix4()
+  )
+  cylinderUnionMesh.material = new THREE.MeshPhongMaterial({
+    color: 0xffa500
+  })
+  cylinderUnionMesh.position.set(2.5, 0, -3);
+  scene.add(cylinderUnionMesh)
+
+  const finalCSG = cubeSphereIntersectCSG.subtract(cylinderUnionCSG);
+  const finalMesh = CSG.toMesh(finalCSG, new THREE.Matrix4())
+  finalMesh.material = material;
+  scene.add(finalMesh)
+
+}
 
 
 window.addEventListener('resize', onWindowResize, false);
@@ -90,31 +136,18 @@ document.body.appendChild(stats.dom);
 const clock = new THREE.Clock()
 let delta;
 
-function animate(){
+function animate() {
+  requestAnimationFrame(animate)
+
   controls.update();
 
   delta = Math.min(clock.getDelta(), 0.1)
-  world.step(delta)
-
-  cubeMesh.position.set(
-    cubeBody.position.x,
-    cubeBody.position.y,
-    cubeBody.position.z
-  )
-  cubeMesh.quaternion.set(
-    cubeBody.quaternion.x,
-    cubeBody.quaternion.y,
-    cubeBody.quaternion.z,
-    cubeBody.quaternion.w,
-
-  )
 
 
 
   render()
   stats.update()
 
-  requestAnimationFrame(animate)
 }
 
 function render() {
