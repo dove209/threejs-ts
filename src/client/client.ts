@@ -125,7 +125,18 @@ document.body.onscroll = () => {
 const stats = Stats()
 document.body.appendChild(stats.dom)
 
+const clock = new THREE.Clock();
+let previousTime = 0;
+
+
 function animate() {
+  const elapsedTime = clock.getElapsedTime();
+  const deltaTime = elapsedTime - previousTime;
+  previousTime = elapsedTime;
+
+  console.log(deltaTime)
+
+
   requestAnimationFrame(animate)
 
   playScrollAnimations();
