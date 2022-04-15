@@ -3,8 +3,13 @@
         "moduleResolution": "node",
         "strict": true,
         "paths": {
-            "three/examples/jsm/libs/tween.module.min" : ["../typings/tween.js"]
+            "three/examples/jsm/libs/tween.module.min": [
+                "../typings/tween.js"
+            ]
         }
     },
-    "include": ["**/*.ts"]
+    "include": [
+        "**/*.ts",
+        "utils/FontLoader.js"
+    ]
 }

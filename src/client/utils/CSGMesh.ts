@@ -7,7 +7,7 @@
  * Holds a binary space partition tree representing a 3D solid. Two solids can
  * be combined using the `union()`, `subtract()`, and `intersect()` methods.
  *
- * Differences Copyright 2020-2021 Sean Bradley : https://sbcode.net/threejs/
+ * Differences Copyright 2020-2022 Sean Bradley : https://sbcode.net/threejs/
  * - Started with CSGMesh.js and csg-lib.js from https://github.com/manthrax/THREE-CSGMesh
  * - Converted to TypeScript by adding type annotations to all variables
  * - Converted var to const and let
@@ -677,46 +677,3 @@ class Node {
 }
 
 export { CSG, Vertex, Vector, Polygon, Plane }
-
- // Return a new CSG solid representing space in either this solid or in the
- // solid `csg`. Neither this solid nor the solid `csg` are modified.
- //
- //     A.union(B)
- //
- //     +-------+            +-------+
- //     |       |            |       |
- //     |   A   |            |       |
- //     |    +--+----+   =   |       +----+
- //     +----+--+    |       +----+       |
- //          |   B   |            |       |
- //          |       |            |       |
- //          +-------+            +-------+
- //
- // Return a new CSG solid representing space in this solid but not in the
- // solid `csg`. Neither this solid nor the solid `csg` are modified.
- //
- //     A.subtract(B)
- //
- //     +-------+            +-------+
- //     |       |            |       |
- //     |   A   |            |       |
- //     |    +--+----+   =   |    +--+
- //     +----+--+    |       +----+
- //          |   B   |
- //          |       |
- //          +-------+
- //
- // Return a new CSG solid representing space both this solid and in the
- // solid `csg`. Neither this solid nor the solid `csg` are modified.
- //
- //     A.intersect(B)
- //
- //     +-------+
- //     |       |
- //     |   A   |
- //     |    +--+----+   =   +--+
- //     +----+--+    |       +--+
- //          |   B   |
- //          |       |
- //          +-------+
- //
