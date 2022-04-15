@@ -1,154 +1,82 @@
 import * as THREE from 'three'
 import Stats from 'three/examples/jsm/libs/stats.module'
 
+
+
+const LABEL_TEXT = 'ABC';
+
+const clock = new THREE.Clock();
 const scene = new THREE.Scene();
 
-const gridHelper = new THREE.GridHelper(10, 10, 0xaec6cf, 0xaec6cf);
-scene.add(gridHelper)
-
-const camera = new THREE.PerspectiveCamera(
-  75,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  1000
-);
-
 const renderer = new THREE.WebGLRenderer();
+renderer.setClearColor(0x222222);
+renderer.setClearAlpha(0);
 renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio || 1);
 document.body.appendChild(renderer.domElement);
 
-const geometry = new THREE.BoxBufferGeometry();
-const material = new THREE.MeshBasicMaterial({
-  color: 0x00ff00,
-  wireframe: true
+
+const camera = new THREE.OrthographicCamera(
+  -window.innerWidth / 2,
+  window.innerWidth / 2,
+  window.innerHeight / 2,
+  -window.innerHeight / 2,
+  0.1,
+  10
+);
+camera.position.set(0, 0, 1);
+camera.lookAt(new THREE.Vector3(0, 0, 0))
+
+
+const labelMeshSize = window.innerWidth > window.innerHeight ? window.innerHeight : window.innerWidth
+const labelGeometry = new THREE.PlaneBufferGeometry(
+  labelMeshSize,
+  labelMeshSize
+)
+
+let labelTextureCanvas;
+{
+  labelTextureCanvas = document.createElement('canvas');
+  const labelTextureCtx = labelTextureCanvas.getContext('2d');
+
+  const textureSize = Math.min(renderer.capabilities.maxTextureSize, 2048);
+  const relativeFontSize = 20;
+
+  labelTextureCanvas.width = textureSize;
+  labelTextureCanvas.height = textureSize;
+  if (labelTextureCtx) {
+    labelTextureCtx.textAlign = 'center';
+    labelTextureCtx.textBaseline = 'middle';
+    labelTextureCtx.font = `${relativeFontSize}px Helvetica`;
+    const textWidth = labelTextureCtx.measureText(LABEL_TEXT).width
+    const widthDelta = labelTextureCanvas.width / textWidth
+    const fontSize = relativeFontSize * widthDelta
+    labelTextureCtx.font = `${fontSize}px Helvetica`
+    labelTextureCtx.fillStyle = 'white'
+    labelTextureCtx.fillText(LABEL_TEXT, labelTextureCanvas.width / 2, labelTextureCanvas.height / 2)
+  }
+}
+
+const labelMaterial = new THREE.MeshBasicMaterial({
+  map: new THREE.CanvasTexture(labelTextureCanvas),
+  transparent: true
 })
 
-const cube = new THREE.Mesh(geometry, material);
-cube.position.set(0, 0.5, -10);
-scene.add(cube)
+const labelMesh = new THREE.Mesh(labelGeometry, labelMaterial);
+scene.add(labelMesh)
 
 window.addEventListener('resize', onWindowResize, false);
 function onWindowResize() {
-  camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
-  render()
 }
-
-// 선형 보간법
-function lerp(x: number, y: number, r: number): number {
-  return (1 - r) * x + r * y
-}
-
-// Used to fit the lerps to start and end at specific scrolling percentages
-function scalePercent(start: number, end: number) {
-  return (scrollPercent - start) / (end - start)
-}
-
-const animationScripts: { start: number; end: number, func: () => void }[] = []
-
-//add an animation that flashes the cube through 100 percent of scroll
-animationScripts.push({
-  start: 0,
-  end: 101,
-  func: () => {
-    let g = material.color.g
-    g -= 0.05
-    if (g <= 0) {
-      g = 1.0
-    }
-    material.color.g = g
-  },
-})
-
-// 0 ~ 40
-animationScripts.push({
-  start: 0,
-  end: 40,
-  func: () => {
-    camera.lookAt(cube.position);
-    camera.position.set(0, 1, 2);
-    cube.position.z = lerp(-10, 0, scalePercent(0, 40))
-  }
-})
-
-// 40 ~ 60
-animationScripts.push({
-  start: 40,
-  end: 60,
-  func: () => {
-    camera.lookAt(cube.position);
-    camera.position.set(0, 1, 2);
-    cube.rotation.z = lerp(0, Math.PI, scalePercent(40, 60))
-  }
-})
-
-// 60 ~ 80
-animationScripts.push({
-  start: 60,
-  end: 80,
-  func: () => {
-    camera.position.x = lerp(0, 5, scalePercent(60, 80));
-    camera.position.y = lerp(1, 5, scalePercent(60, 80));
-    camera.lookAt(cube.position)
-  }
-})
-
-// 80 ~ 100
-animationScripts.push({
-  start: 80,
-  end: 101,
-  func: () => {
-    cube.rotation.x += 0.01;
-    cube.rotateY(0.01)
-  }
-})
-
-
-function playScrollAnimations() {
-  animationScripts.forEach((a) => {
-    if (scrollPercent >= a.start && scrollPercent < a.end) {
-      a.func()
-    }
-  })
-}
-
-let scrollPercent = 0
-
-document.body.onscroll = () => {
-  scrollPercent =
-    ((document.documentElement.scrollTop || document.body.scrollTop) / ((document.documentElement.scrollHeight || document.body.scrollHeight) - document.documentElement.clientHeight)) * 100;
-  (document.getElementById('scrollProgress') as HTMLDivElement).innerText = 'Scroll Progress : ' + scrollPercent.toFixed(2)
-}
-
 
 const stats = Stats()
 document.body.appendChild(stats.dom)
 
-const clock = new THREE.Clock();
-let previousTime = 0;
+renderer.setAnimationLoop(onAnimLoop)
 
+function onAnimLoop() {
 
-function animate() {
-  const elapsedTime = clock.getElapsedTime();
-  const deltaTime = elapsedTime - previousTime;
-  previousTime = elapsedTime;
-
-  console.log(deltaTime)
-
-
-  requestAnimationFrame(animate)
-
-  playScrollAnimations();
-
-  render()
-
-  stats.update()
-}
-
-function render() {
   renderer.render(scene, camera)
 }
-
-
-animate()
