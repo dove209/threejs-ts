@@ -16,7 +16,7 @@ const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0xf7d9aa, 100, 950);
 
 const AexisHelper = new THREE.AxesHelper(500);
-scene.add(AexisHelper)
+// scene.add(AexisHelper)
 
 
 const camera = new THREE.PerspectiveCamera(
