@@ -51,7 +51,7 @@ scene.add(hemisphereLight);
 scene.add(shadowLight)
 
 // 바다 Object
-const seaGeometry = new THREE.CylinderBufferGeometry(600, 600, 800, 40, 10);
+const seaGeometry = new THREE.CylinderBufferGeometry(600, 600, 800, 40, 10, true, 0, 7);
 seaGeometry.applyMatrix4(new THREE.Matrix4().makeRotationX(-Math.PI / 2));
 seaGeometry.attributes.position.needsUpdate = true;
 
@@ -105,54 +105,6 @@ function moveWaves() {
   }
   seaMesh.rotation.z += .005;
 }
-
-// 장애물 Object
-function Obstacle() {
-  let num = Math.floor(Math.random() * 6);
-  const geom = new THREE.SphereBufferGeometry(10, 8, 6);
-  const mat = new THREE.MeshPhongMaterial({
-    color: num === 0 ? Colors.red :
-      num === 1 ? Colors.white :
-        num === 2 ? Colors.pink :
-          num === 3 ? Colors.brown :
-            num === 4 ? Colors.brownDark :
-              Colors.blue,
-    flatShading: true
-  });
-  const obstacle = new THREE.Mesh(geom, mat);
-  obstacle.position.set(0, Math.random() * 10, 0);
-  obstacle.rotation.z = Math.random() * Math.PI * 2;
-  obstacle.rotation.y = Math.random() * Math.PI * 2;
-  obstacle.castShadow = true;
-  obstacle.receiveShadow = true;
-  return obstacle;
-}
-
-// 장애물들 
-function ObstacleSky() {
-  const obstacleSkyObject = new THREE.Object3D();
-  let n = 8;
-
-  let stepAngle = Math.PI * 2 / n;
-
-  for (let i = 0; i < n; i++) {
-    let c = Obstacle();
-
-    let a = stepAngle * i;
-    let h = 120 + Math.random() * 20;
-
-    c.position.y = Math.sin(a) * h;
-    c.position.x = Math.cos(a) * h;
-    c.rotation.z = a + Math.PI / 2;
-
-    let size = Math.random() + 0.5;
-    c.scale.set(size, size, size);
-
-    obstacleSkyObject.add(c)
-  }
-  return obstacleSkyObject;
-}
-
 
 // 구름 Object
 function Cloud() {
@@ -212,8 +164,6 @@ const skyMesh = Sky();
 skyMesh.position.y = -600;
 scene.add(skyMesh)
 
-const obstacleMesh = ObstacleSky();
-scene.add(obstacleMesh)
 
 // 파일럿
 function Pilot() {
@@ -507,8 +457,6 @@ updateHairs()
 function animate() {
   moveWaves();
   skyMesh.rotateZ(0.01);
-  obstacleMesh.rotateZ(0.013)
-
   updatePlane()
 
   updateHairs()
