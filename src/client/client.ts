@@ -1,23 +1,21 @@
 import * as THREE from 'three'
-import Stats from 'three/examples/jsm/libs/stats.module'
+import Stats from 'three/examples/jsm/libs/stats.module';
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
 let Colors = {
   red: 0xf25346,
-  whithe: 0xd8d0d1,
+  white: 0xd8d0d1,
   brown: 0x59332e,
   pink: 0xf5986e,
   brownDark: 0x23190f,
   blue: 0x68c3c0,
 }
 
-
 const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0xf7d9aa, 100, 950);
 
 const AexisHelper = new THREE.AxesHelper(500);
 // scene.add(AexisHelper)
-
 
 const camera = new THREE.PerspectiveCamera(
   60,
@@ -53,8 +51,35 @@ scene.add(hemisphereLight);
 scene.add(shadowLight)
 
 // 바다 Object
-const seaGeometry = new THREE.SphereGeometry(650, 18, 8);
-seaGeometry.applyMatrix4(new THREE.Matrix4().makeRotationX(-Math.PI / 2))
+const seaGeometry = new THREE.CylinderBufferGeometry(600, 600, 800, 40, 10);
+seaGeometry.applyMatrix4(new THREE.Matrix4().makeRotationX(-Math.PI / 2));
+seaGeometry.attributes.position.needsUpdate = true;
+
+let l = getvertices(seaGeometry).length;
+
+interface Iwave {
+  x: number,
+  y: number,
+  z: number,
+  ang: number,
+  amp: number,
+  speed: number
+}
+
+let waves: Iwave[] = [];
+
+for (let i = 0; i < l; i++) {
+  let v = getvertices(seaGeometry)[i];
+  waves.push({
+    x: v.x,
+    y: v.y,
+    z: v.z,
+    ang: Math.random() * Math.PI * 2,
+    amp: 5 + Math.random() * 15,
+    speed: 0.016 + Math.random() * 0.032
+  })
+}
+
 const seaMaterial = new THREE.MeshPhongMaterial({
   color: Colors.blue,
   transparent: true,
@@ -63,27 +88,90 @@ const seaMaterial = new THREE.MeshPhongMaterial({
 })
 
 const seaMesh = new THREE.Mesh(seaGeometry, seaMaterial);
-
+seaGeometry.attributes.position.needsUpdate = true;
 seaMesh.receiveShadow = true;
 seaMesh.position.y = -600;
 scene.add(seaMesh)
 
+function moveWaves() {
+  let l = seaGeometry.attributes.position.count;
+  for (let i = 0; i < l; i++) {
+    let vprops = waves[i];
+    let x = vprops.x + Math.cos(vprops.ang) * vprops.amp;
+    let y = vprops.y + Math.cos(vprops.ang) * vprops.amp;
+    seaGeometry.attributes.position.setXY(i, x, y);
+
+    vprops.ang += vprops.speed;
+  }
+  seaMesh.rotation.z += .005;
+}
+
+// 장애물 Object
+function Obstacle() {
+  let num = Math.floor(Math.random() * 6);
+  const geom = new THREE.SphereBufferGeometry(10, 8, 6);
+  const mat = new THREE.MeshPhongMaterial({
+    color: num === 0 ? Colors.red :
+      num === 1 ? Colors.white :
+        num === 2 ? Colors.pink :
+          num === 3 ? Colors.brown :
+            num === 4 ? Colors.brownDark :
+              Colors.blue,
+    flatShading: true
+  });
+  const obstacle = new THREE.Mesh(geom, mat);
+  obstacle.position.set(0, Math.random() * 10, 0);
+  obstacle.rotation.z = Math.random() * Math.PI * 2;
+  obstacle.rotation.y = Math.random() * Math.PI * 2;
+  obstacle.castShadow = true;
+  obstacle.receiveShadow = true;
+  return obstacle;
+}
+
+// 장애물들 
+function ObstacleSky() {
+  const obstacleSkyObject = new THREE.Object3D();
+  let n = 8;
+
+  let stepAngle = Math.PI * 2 / n;
+
+  for (let i = 0; i < n; i++) {
+    let c = Obstacle();
+
+    let a = stepAngle * i;
+    let h = 120 + Math.random() * 20;
+
+    c.position.y = Math.sin(a) * h;
+    c.position.x = Math.cos(a) * h;
+    c.rotation.z = a + Math.PI / 2;
+
+    let size = Math.random() + 0.5;
+    c.scale.set(size, size, size);
+
+    obstacleSkyObject.add(c)
+  }
+  return obstacleSkyObject;
+}
+
+
 // 구름 Object
 function Cloud() {
   const cloudObject = new THREE.Object3D();
-  let nBlocs = 3+Math.floor(Math.random()*3);
-  for(let i = 0; i < nBlocs; i++) {
+  let nBlocs = 3 + Math.floor(Math.random() * 3);
+  for (let i = 0; i < nBlocs; i++) {
     let m = new THREE.Mesh(
-      new THREE.BoxBufferGeometry(20, 20, 20),
+      // new THREE.BoxBufferGeometry(20, 20, 20),
+      new THREE.SphereBufferGeometry(20, 6, 5),
       new THREE.MeshPhongMaterial({
-        color: Colors.whithe
+        color: Colors.white,
+        flatShading: true
       })
     )
-    m.position.set(i * 15, Math.random()* 10, Math.random()*10);
+    m.position.set(i * 15, Math.random() * 10, Math.random() * 10);
     m.rotation.z = Math.random() * Math.PI * 2;
     m.rotation.y = Math.random() * Math.PI * 2;
 
-    let size = 0.1 + Math.random()*0.9;
+    let size = 0.1 + Math.random() * 0.9;
     m.scale.set(size, size, size);
 
     m.castShadow = true;
@@ -99,9 +187,9 @@ function Sky() {
   const skyObject = new THREE.Object3D();
   let nClouds = 20;
 
-  let stepAngle = Math.PI *  2 / nClouds;
+  let stepAngle = Math.PI * 2 / nClouds;
 
-  for(let i=0;  i < nClouds; i++) {
+  for (let i = 0; i < nClouds; i++) {
     let c = Cloud();
 
     let a = stepAngle * i;
@@ -123,6 +211,9 @@ function Sky() {
 const skyMesh = Sky();
 skyMesh.position.y = -600;
 scene.add(skyMesh)
+
+const obstacleMesh = ObstacleSky();
+scene.add(obstacleMesh)
 
 // 파일럿
 function Pilot() {
@@ -152,13 +243,13 @@ function Pilot() {
   let hairsTop = new THREE.Object3D();
   hairsTop.name = 'hairsTop';
 
-  for (let i = 0;  i < 12; i++) {
+  for (let i = 0; i < 12; i++) {
     let h = hair.clone();
     let col = i % 3;
-    let row = Math.floor(i/3);
+    let row = Math.floor(i / 3);
     let startPosZ = -4;
     let startPosX = -4;
-    h.position.set(startPosX + row * 4, 0, startPosZ + col*4);
+    h.position.set(startPosX + row * 4, 0, startPosZ + col * 4);
     hairsTop.add(h)
   }
   hairs.add(hairsTop);
@@ -178,7 +269,7 @@ function Pilot() {
   let hairBack = new THREE.Mesh(hairBackGeom, hairMat);
   hairBack.position.set(-1, -4, 0);
   hairs.add(hairBack);
-  
+
   hairs.position.set(-5, 5, 0)
   mesh.add(hairs)
 
@@ -211,78 +302,76 @@ function Pilot() {
 }
 
 // 비행기
-function AirPlane () {
+function AirPlane() {
   const mesh = new THREE.Object3D();
 
   // 조종석
-  // const geomCockpit = new THREE.BoxGeometry(80, 50, 50, 1, 1, 1);
   // create a simple square shape. We duplicate the top left and bottom right
   // vertices because each vertex needs to appear once per triangle.
   const matCockpit = new THREE.MeshPhongMaterial({ color: Colors.red, flatShading: true });
-  let geomCockpit = new THREE.BufferGeometry()
+  let geomCockpit = new THREE.BufferGeometry();
   const points = [
-      // front
-      new THREE.Vector3(-40, -5, 15),  // 
-      new THREE.Vector3(40, -25, 25),
-      new THREE.Vector3(-40, 15, 15),   //
+    // front
+    new THREE.Vector3(-40, -5, 15),  // 
+    new THREE.Vector3(40, -25, 25),
+    new THREE.Vector3(-40, 15, 15),   //
 
-      new THREE.Vector3(-40, 15, 15),   //
-      new THREE.Vector3(40, -25, 25),
-      new THREE.Vector3(40, 25, 25),
-      // right
-      new THREE.Vector3(40, -25, 25),
-      new THREE.Vector3(40, -25, -25),
-      new THREE.Vector3(40, 25, 25),
+    new THREE.Vector3(-40, 15, 15),   //
+    new THREE.Vector3(40, -25, 25),
+    new THREE.Vector3(40, 25, 25),
+    // right
+    new THREE.Vector3(40, -25, 25),
+    new THREE.Vector3(40, -25, -25),
+    new THREE.Vector3(40, 25, 25),
 
-      new THREE.Vector3(40, 25, 25),
-      new THREE.Vector3(40, -25, -25),
-      new THREE.Vector3(40, 25, -25),
-      
-      //back
-      new THREE.Vector3(40, -25, -25),
-      new THREE.Vector3(-40, -5, -15), //
-      new THREE.Vector3(40, 25, -25),
+    new THREE.Vector3(40, 25, 25),
+    new THREE.Vector3(40, -25, -25),
+    new THREE.Vector3(40, 25, -25),
 
-      new THREE.Vector3(40, 25, -25),
-      new THREE.Vector3(-40, -5, -15), //
-      new THREE.Vector3(-40, 15, -15),  //
+    //back
+    new THREE.Vector3(40, -25, -25),
+    new THREE.Vector3(-40, -5, -15), //
+    new THREE.Vector3(40, 25, -25),
 
-      //left
-      new THREE.Vector3(-40, -5, -15),  //
-      new THREE.Vector3(-40, -5, 15),   // 
-      new THREE.Vector3(-40, 15, -15),   //
+    new THREE.Vector3(40, 25, -25),
+    new THREE.Vector3(-40, -5, -15), //
+    new THREE.Vector3(-40, 15, -15),  //
 
-      new THREE.Vector3(-40, 15, -15),   //
-      new THREE.Vector3(-40, -5, 15),   //
-      new THREE.Vector3(-40, 15, 15),    //
+    //left
+    new THREE.Vector3(-40, -5, -15),  //
+    new THREE.Vector3(-40, -5, 15),   // 
+    new THREE.Vector3(-40, 15, -15),   //
 
-      //top
-      new THREE.Vector3(40, 25, -25),
-      new THREE.Vector3(-40, 15, -15),   //
-      new THREE.Vector3(40, 25, 25),
+    new THREE.Vector3(-40, 15, -15),   //
+    new THREE.Vector3(-40, -5, 15),   //
+    new THREE.Vector3(-40, 15, 15),    //
 
-      new THREE.Vector3(40, 25, 25),
-      new THREE.Vector3(-40, 15, -15),   //
-      new THREE.Vector3(-40, 15, 15),     //
+    //top
+    new THREE.Vector3(40, 25, -25),
+    new THREE.Vector3(-40, 15, -15),   //
+    new THREE.Vector3(40, 25, 25),
 
-      //bottom
-      new THREE.Vector3(40, -25, 25),
-      new THREE.Vector3(-40, -5, 15),   //
-      new THREE.Vector3(40, -25, -25),
+    new THREE.Vector3(40, 25, 25),
+    new THREE.Vector3(-40, 15, -15),   //
+    new THREE.Vector3(-40, 15, 15),     //
 
-      new THREE.Vector3(40, -25, -25),
-      new THREE.Vector3(-40, -5, 15),   //
-      new THREE.Vector3(-40, -5, -15),  //
+    //bottom
+    new THREE.Vector3(40, -25, 25),
+    new THREE.Vector3(-40, -5, 15),   //
+    new THREE.Vector3(40, -25, -25),
 
+    new THREE.Vector3(40, -25, -25),
+    new THREE.Vector3(-40, -5, 15),   //
+    new THREE.Vector3(-40, -5, -15),  //
   ]
-  geomCockpit.setFromPoints(points)
+  geomCockpit.setFromPoints(points);
   const cockpit = new THREE.Mesh(geomCockpit, matCockpit);
   cockpit.castShadow = cockpit.receiveShadow = true;
   mesh.add(cockpit)
 
   // 엔진
   const geomEngin = new THREE.BoxBufferGeometry(20, 50, 50, 1, 1, 1);
-  const matEngin = new THREE.MeshPhongMaterial({ color: Colors.whithe, flatShading:true });
+  const matEngin = new THREE.MeshPhongMaterial({ color: Colors.white, flatShading: true });
   const engine = new THREE.Mesh(geomEngin, matEngin);
   engine.position.x = 40;
   engine.castShadow = engine.receiveShadow = true;
@@ -290,7 +379,7 @@ function AirPlane () {
 
   // 꼬리
   const geomTail = new THREE.BoxBufferGeometry(15, 20, 5, 1, 1, 1);
-  const matTail = new THREE.MeshPhongMaterial({ color: Colors.red, flatShading:true });
+  const matTail = new THREE.MeshPhongMaterial({ color: Colors.red, flatShading: true });
   const tail = new THREE.Mesh(geomTail, matTail);
   tail.position.set(-35, 25, 0);
   tail.castShadow = tail.receiveShadow = true;
@@ -306,24 +395,24 @@ function AirPlane () {
 
   // 바퀴(큰)
   const geombigWheel = new THREE.BoxBufferGeometry(30, 30, 5, 1, 1, 1);
-  const matbigWheel = new THREE.MeshPhongMaterial({ color: Colors.brownDark, flatShading:true });
+  const matbigWheel = new THREE.MeshPhongMaterial({ color: Colors.brown, flatShading: true });
   const bigWheel1 = new THREE.Mesh(geombigWheel, matbigWheel);
-  bigWheel1.position.set(10, -25, 20);
+  bigWheel1.position.set(10, -20, 20);
   bigWheel1.castShadow = bigWheel1.receiveShadow = true;
   mesh.add(bigWheel1);
   const bigWheel2 = new THREE.Mesh(geombigWheel, matbigWheel);
-  bigWheel2.position.set(10, -25, -20);
+  bigWheel2.position.set(10, -20, -20);
   bigWheel2.castShadow = bigWheel2.receiveShadow = true;
   mesh.add(bigWheel2);
   // 바퀴(내부)
   const geomSmallWheel = new THREE.BoxBufferGeometry(10, 10, 5.1, 1, 1, 1);
-  const matSmalWheel = new THREE.MeshPhongMaterial({ color: Colors.pink, flatShading:true });
+  const matSmalWheel = new THREE.MeshPhongMaterial({ color: Colors.pink, flatShading: true });
   const smallWheel1 = new THREE.Mesh(geomSmallWheel, matSmalWheel);
-  smallWheel1.position.set(10, -30, 20);
+  smallWheel1.position.set(10, -25, 20);
   smallWheel1.castShadow = smallWheel1.receiveShadow = true;
   mesh.add(smallWheel1);
   const smallWheel2 = new THREE.Mesh(geomSmallWheel, matSmalWheel);
-  smallWheel2.position.set(10, -30, -20);
+  smallWheel2.position.set(10, -25, -20);
   smallWheel2.castShadow = smallWheel2.receiveShadow = true;
   mesh.add(smallWheel2);
 
@@ -339,7 +428,7 @@ function AirPlane () {
   const geomPropeller = new THREE.BoxBufferGeometry(20, 10, 10, 1, 1, 1);
   const matPropeller = new THREE.MeshPhongMaterial({ color: Colors.brown, flatShading: true });
   const propeller = new THREE.Mesh(geomPropeller, matPropeller);
-  propeller.name='propeller'
+  propeller.name = 'propeller'
   propeller.castShadow = propeller.receiveShadow = true;
 
   // 프로렐러 날
@@ -356,7 +445,7 @@ function AirPlane () {
   blade2.rotateX(-Math.PI / 2)
   propeller.add(blade2);
 
-  propeller.position.set(50, 0 ,0);
+  propeller.position.set(50, 0, 0);
   mesh.add(propeller)
 
   // 파일럿
@@ -369,6 +458,7 @@ function AirPlane () {
 
 const airPlane = AirPlane();
 airPlane.scale.set(0.25, 0.25, 0.25);
+airPlane.position.x = -20;
 airPlane.position.y = 100;
 scene.add(airPlane)
 
@@ -392,7 +482,7 @@ renderer.domElement.addEventListener('mousemove', handleMouseMove, false);
 function handleMouseMove(e: MouseEvent) {
   let tx = -1 + (e.clientX / renderer.domElement.clientWidth) * 2
   let ty = 1 - (e.clientY / renderer.domElement.clientHeight) * 2
-  
+
   mousePos = {
     x: tx,
     y: ty
@@ -402,24 +492,25 @@ function handleMouseMove(e: MouseEvent) {
 let angleHairs = 0;
 function updateHairs() {
   let hairs = scene.getObjectByName('hairsTop')?.children;
-  if(hairs) {
+  if (hairs) {
     let l = hairs?.length;
-    for(let i = 0; i < l; i++) {
+    for (let i = 0; i < l; i++) {
       let h = hairs[i];
       h.scale.y = 0.75 + Math.cos(angleHairs + i / 3) * .25;
     }
     angleHairs += 0.16;
-  } 
+  }
 }
 
 updateHairs()
 
 function animate() {
-  seaMesh.rotation.z += 0.005;
+  moveWaves();
   skyMesh.rotateZ(0.01);
-  
+  obstacleMesh.rotateZ(0.013)
+
   updatePlane()
-  
+
   updateHairs()
 
   render()
@@ -430,20 +521,26 @@ function animate() {
 }
 
 function updatePlane() {
-	// let's move the airplane between -100 and 100 on the horizontal axis, 
-	// and between 25 and 175 on the vertical axis,
-	// depending on the mouse position which ranges between -1 and 1 on both axes;
-	// to achieve that we use a normalize function (see below)
+  // let's move the airplane between -100 and 100 on the horizontal axis, 
+  // and between 25 and 175 on the vertical axis,
+  // depending on the mouse position which ranges between -1 and 1 on both axes;
+  // to achieve that we use a normalize function (see below)
   let targetX = map(mousePos.x, -0.75, 0.75, -100, 100);
   let targetY = map(mousePos.y, -0.75, 0.75, 55, 175);
-  
+
   airPlane.position.y += (targetY - airPlane.position.y) * 0.1;
-  
+
   airPlane.rotation.z = (targetY - airPlane.position.y) * 0.0128
   airPlane.rotation.x = (airPlane.position.y - targetY) * 0.0064;
 
   scene.getObjectByName('propeller')?.rotateX(0.3);
 }
+
+function render() {
+  renderer.render(scene, camera)
+}
+
+animate()
 
 function map(v: number, vmin: number, vmax: number, tmin: number, tmax: number): number {
   let nv = Math.max(Math.min(v, vmax), vmin);
@@ -454,10 +551,14 @@ function map(v: number, vmin: number, vmax: number, tmin: number, tmax: number):
   return tv
 }
 
-
-function render() {
-  renderer.render(scene, camera)
+function getvertices(geometry: THREE.BufferGeometry) {
+  let result = [];
+  let vertexArr = geometry.getAttribute('position');
+  let count = geometry.getAttribute('position').count;
+  for (let i = 0; i < count; i++) {
+    let vertex = new THREE.Vector3;
+    vertex.fromBufferAttribute(vertexArr, i);
+    result.push(vertex)
+  }
+  return result;
 }
-
-
-animate()
