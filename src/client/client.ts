@@ -83,10 +83,10 @@ const geomRoundBox = new RoundedBoxGeometry(0.5, 0.5, 0.5, .02, 0.2);
 
 const geomCone = new THREE.ConeBufferGeometry(0.3, 0.5, 32);
 
-const torus = new THREE.SphereBufferGeometry(0.3, 6, 5);
+const spher = new THREE.SphereBufferGeometry(0.3, 6, 5);
 
 
-let geometries = [geomRoundBox, geomCone, torus];
+let geometries = [geomRoundBox, geomCone, spher];
 let gutter = { size: 1 };
 let meshes: any[] = []
 let grid = { cols: 14, rows: 6 };
@@ -154,7 +154,6 @@ function draw() {
   const intersects = raycaster.intersectObjects([floor]);
   if (intersects.length) {
     const { x, z } = intersects[0].point;
-
     for (let row = 0; row < grid.rows; row++) {
       for (let col = 0; col < grid.cols; col++) {
         const mesh = meshes[row][col];
@@ -183,7 +182,7 @@ function draw() {
         gsap.to(mesh.rotation, 0.7, {
           ease: "back.Out.config(1.7)",
           x: map(mesh.position.y, -1, 1, radians(45), 0),
-          y: map(mesh.position.y, -1, 1, radians(-90), 0),
+          y: map(mesh.position.y, -1, 1, radians(90), 0),
           z: map(mesh.position.y, -1, 1, radians(90), 0),
         })
       }
