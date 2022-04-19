@@ -22,5 +22,8 @@
     "webpack-cli": "^4.8.0",
     "webpack-dev-server": "^4.0.0",
     "webpack-merge": "^5.8.0"
+  },
+  "dependencies": {
+    "gsap": "^3.10.3"
   }
 }
