@@ -40,8 +40,8 @@ function lerp(x: number, y: number, r: number): number {
   return (1 - r) * x + r * y
 }
 
-// Used to fit the lerps to start and end at specific scrolling percentages
-function scalePercent(start: number, end: number) {
+// Used to fit the lerps to start and end at specific scrolling percentages(0~1)
+function scalePercent(start: number, end: number): number {
   return (scrollPercent - start) / (end - start)
 }
 
@@ -99,8 +99,8 @@ animationScripts.push({
   start: 80,
   end: 101,
   func: () => {
-    cube.rotation.x += 0.01;
-    cube.rotateY(0.01)
+    cube.rotateX(0.01);
+    cube.rotateY(0.01);
   }
 })
 
