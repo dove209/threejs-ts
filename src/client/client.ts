@@ -1,156 +1,80 @@
 import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import { FlakesTexture } from './utils/flaskesTexture';
+import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader';
 
-const fontURL = "fonts/droid_sans_mono_regular.typeface.json";
+const scene = new THREE.Scene();
 
-class Menu {
-  $navItems: any;
-  scene: THREE.Scene;
-  loader: THREE.FontLoader;
-  words: any[];
+const camera = new THREE.PerspectiveCamera(
+  50,
+  window.innerWidth / window.innerHeight,
+  1,
+  1000
+);
+camera.position.set(0, 0, 500);
 
-  constructor(scene: THREE.Scene) {
-    // DOM elements
-    this.$navItems = document.querySelectorAll(".mainNav a");
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha:false });
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.25;
 
-    // Three components
-    this.scene = scene;
-    this.loader = new THREE.FontLoader();
-
-    // Constants
-    this.words = [];
-
-    this.loader.load(fontURL, f => {
-      this.setup(f);
-    });
-  }
-
-  setup(f: any) {
-    const fontOption = {
-      font: f,
-      size: 3,
-      height: 0.4,
-      curveSegments: 24,
-      bevelEnabled: true,
-      bevelThickness: 0.9,
-      bevelSize: 0.3,
-      bevelOffset: 0,
-      bevelSegments: 10
-    };
-
-    Array.from(this.$navItems)
-      .reverse()
-      .forEach(($item, i) => {
-        const { innerText }: any = $item;
-
-        const words = new THREE.Group();
-        Array.from(innerText).forEach((letter: any, j) => {
-          const material = new THREE.MeshPhongMaterial({ color: 0x97df5e });
-          const geometry = new THREE.TextBufferGeometry(letter, fontOption);
-
-          const mesh = new THREE.Mesh(geometry, material);
-          words.add(mesh);
-        });
-
-        this.words.push(words);
-        this.scene.add(words);
-      });
-  }
-}
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
 
-class Scene {
-  scene!: THREE.Scene;
-  camera!: any;
-  clock!: THREE.Clock;
-  renderer!: THREE.WebGLRenderer;
-  menu: any;
-
-
-  $container: any;
-  W!: number;
-  H!: number
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.autoRotate = true;
+controls.autoRotateSpeed = 2.5;
   
-  constructor() {
-    this.$container = document.getElementById('stage');
-    this.W = window.innerWidth;
-    this.H = window.innerHeight;
+// Light
+const pointLight = new THREE.PointLight(0xffffff, 1);
+pointLight.position.set(200, 200, 200);
+scene.add(pointLight);
 
-    this.setup()
-    this.bindEvents();
-  }
+// Ball
+let envmaploader = new THREE.PMREMGenerator(renderer);
+
+new RGBELoader().load('img/neon_photostudio_2k.hdr', function(hdrmap) {
+  let envmap = envmaploader.fromCubemap(hdrmap as any);
+
+  let texture = new THREE.CanvasTexture(new FlakesTexture() as HTMLCanvasElement);
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.x = 10;
+  texture.repeat.y = 6;
+  
+  
+  const ballGeo = new THREE.SphereBufferGeometry(100, 64, 64);
+  const ballMat = new THREE.MeshPhysicalMaterial({
+    clearcoat: 1.0,
+    clearcoatRoughness: 0.1,
+    metalness:0.9,
+    roughness: 0.5,
+    color: 0x8418ca,
+    normalMap: texture,
+    normalScale: new THREE.Vector2(0.15, 0.15),
+    envMap: envmap.texture
+  });
+  const ballMesh = new THREE.Mesh(ballGeo, ballMat);
+  scene.add(ballMesh)
+})
 
 
-  bindEvents() {
-    window.addEventListener("resize", () => {
-      this.onResize();
-    });
-  }
-  setup() {
-    // Set Three componets
-    this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.Fog(0x202533, -1, 100);
-    this.clock = new THREE.Clock();
 
-    // Set options of our scene
-    this.setCamera();
-    this.setLight();
-    this.setRender();
-    this.addObject();
-    this.renderer.setAnimationLoop(() => { this.draw() })
 
-  }
-  setRender() {
-    this.renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      canvas: this.$container
-    });
-    this.renderer.setClearColor(0x202533);
-    this.renderer.setSize(this.W, this.H);
-    this.renderer.setPixelRatio(window.devicePixelRatio);
-    this.renderer.shadowMap.enabled = true;
-    this.renderer.setAnimationLoop(() => {
-      this.draw();
-    })
-  }
 
-  setCamera() {
-    const aspect = window.innerWidth / window.innerHeight;
-    const distance = 15;
 
-    this.camera = new THREE.OrthographicCamera(-distance * aspect, distance * aspect, distance, -distance, -1, 100);
-    this.camera.position.set(-10, 10, 10)
-    this.camera.lookAt(new THREE.Vector3());
-  }
-  draw() {
-    this.renderer.render(this.scene, this.camera);
-  }
+function animate() {
+  requestAnimationFrame(animate);
 
-  setLight() {
-    const ambientLight = new THREE.AmbientLight(0xcccccc);
-    this.scene.add(ambientLight);
+  controls.update();
 
-    const foreLight = new THREE.DirectionalLight(0xffffff, 0.5);
-    foreLight.position.set(5, 5, 20);
-    this.scene.add(foreLight);
-
-    const backLight = new THREE.DirectionalLight(0xffffff, 1);
-    backLight.position.set(-5, -5, -10);
-    this.scene.add(backLight);
-  }
-
-  addObject() {
-    this.menu = new Menu(this.scene);
-  }
-
-  onResize() {
-    this.W = window.innerWidth;
-    this.H = window.innerHeight;
-
-    this.camera.aspect = this.W / this.H;
-
-    this.camera.updateProjectionMatrix();
-    this.renderer.setSize(this.W, this.H);
-  }
+  render();
 }
 
-new Scene();
+function render() {
+  renderer.render(scene, camera);
+}
+
+animate();

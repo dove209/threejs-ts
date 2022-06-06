@@ -7,69 +7,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Three.js TypeScript Tutorials</title>
     <style>
-        @import url("https://fonts.googleapis.com/css?family=Abril+Fatface&display=swap");
-
         body {
-            font-family: "Abril Fatface", cursive;
-            margin: 0;
-            overflow: hidden;
-        }
-
-        #stage {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
-
-        .mainNav {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-
-            transform: translate(-50%, -50%);
-            z-index: 10;
-
-            pointer-events: none;
-        }
-
-        .mainNav__list {
-            list-style: none;
-            text-align: center;
-            padding-left: 0;
-            margin: 0;
-        }
-
-        .mainNav__el:not(:last-child) {
-            margin-bottom: 50px;
-        }
-
-        .mainNav__link {
-            display: inline-block;
-            font-size: 170px;
-            text-decoration: none;
-            opacity: 0;
-            line-height: 0.8;
+            overflow-x: hidden;
+            margin: 0px;
         }
     </style>
 </head>
 
 <body>
-    <canvas id="stage"></canvas>
-    <nav class="mainNav">
-        <ul class="mainNav__list">
-            <li class="mainNav__el">
-                <a href="#" class="mainNav__link">Candies</a>
-            </li>
-            <li class="mainNav__el">
-                <a href="#" class="mainNav__link">Chocolate</a>
-            </li>
-            <li class="mainNav__el">
-                <a href="#" class="mainNav__link">Caramel</a>
-            </li>
-        </ul>
-    </nav>
     <script type="module" src="bundle.js"></script>
 </body>
 
