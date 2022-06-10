@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
-import { FlakesTexture } from './utils/flaskesTexture';
+import { FlakesTexture } from '../utils/flaskesTexture';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader';
 
 const scene = new THREE.Scene();
