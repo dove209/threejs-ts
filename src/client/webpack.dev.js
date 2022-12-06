@@ -11,5 +11,11 @@ module.exports = merge(common, {
         },
         hot: true,
         port: 10206,
+        proxy: {
+            '/socket.io' : {
+                target: 'http://localhost:3000',
+                we: true
+            }
+        }
     },
 })
